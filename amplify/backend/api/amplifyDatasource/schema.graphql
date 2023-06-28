@@ -1,0 +1,7 @@
+type IoT @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  datetime: AWSDateTime
+  temperature: Float
+  humidity: Float
+  note: String
+}
