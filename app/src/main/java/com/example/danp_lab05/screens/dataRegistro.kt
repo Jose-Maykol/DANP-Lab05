@@ -2,6 +2,7 @@ package com.example.danp_lab05.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -14,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.amplifyframework.core.Amplify
+import com.amplifyframework.core.model.temporal.Temporal
+import com.amplifyframework.datastore.generated.model.IoT
 import com.example.danp_lab05.models.Registro
 import java.util.*
 
@@ -22,8 +26,7 @@ fun dataRegistro(navController: NavController? = null) {
 
     val registro = remember { mutableStateListOf<Registro>() }
     var temperatura by remember { mutableStateOf("") }
-    var intenLuz by remember { mutableStateOf("") }
-    var presionAtm by remember { mutableStateOf("") }
+    var nota by remember { mutableStateOf("") }
     var humedadRel by remember { mutableStateOf("") }
     var fechaRegistro by remember { mutableStateOf("") }
     var horaRegistro by remember { mutableStateOf("") }
@@ -48,22 +51,7 @@ fun dataRegistro(navController: NavController? = null) {
             label = { Text("Temperatura") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         )
-        Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
-        TextField(
-            value = intenLuz,
-            onValueChange = { intenLuz = it },
-            label = { Text("Intensidad de luz") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-        )
-        Spacer(modifier = Modifier.padding(vertical = 4.dp))
-
-        TextField(
-            value = presionAtm,
-            onValueChange = { presionAtm = it },
-            label = { Text("Presión atmosférica") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-        )
         Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
         TextField(
@@ -74,20 +62,41 @@ fun dataRegistro(navController: NavController? = null) {
         )
         Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
+        TextField(
+            value = nota,
+            onValueChange = { nota = it },
+            label = { Text("Nota") },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        )
+
+        Spacer(modifier = Modifier.padding(vertical = 4.dp))
+
         Button(
             onClick = {
-                navController?.navigate("register_screen")
+                enviarRegistro(fechaRegistro, horaRegistro, temperatura, humedadRel, nota)
+                //navController?.navigate("register_screen")
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            enviarRegistro()
             Text(text = "Registrar")
         }
     }
 }
-@Composable
-fun enviarRegistro() {
+fun enviarRegistro(fechaRegistro: String, horaRegistro: String, temperatura: String, humedadRel: String, nota: String) {
     ///Cargar datos
+    val item: IoT = IoT.builder()
+        .datetime(Temporal.DateTime("1970-01-01T12:30:23.999Z"))
+        .temperature(temperatura.toDoubleOrNull()?:0.0)
+        .humidity(humedadRel.toDoubleOrNull()?:0.0)
+        .note(nota)
+        .build()
+    Amplify.DataStore.save(
+        item,
+        { success -> Log.i("Amplify", "Saved item: " + success.item().note) },
+        { error -> Log.e("Amplify", "Could not save item to DataStore", error) }
+    )
+    Log.i("fecha", " " + fechaRegistro)
+    Log.i("fecha", " " + horaRegistro)
 }
 
 @Composable
@@ -162,3 +171,4 @@ fun DateTimePicker(hora: String) {
         }
     }
 }
+
