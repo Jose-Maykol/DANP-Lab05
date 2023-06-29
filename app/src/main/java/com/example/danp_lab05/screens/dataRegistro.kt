@@ -19,6 +19,9 @@ import com.amplifyframework.core.Amplify
 import com.amplifyframework.core.model.temporal.Temporal
 import com.amplifyframework.datastore.generated.model.IoT
 import com.example.danp_lab05.models.Registro
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 @Composable
@@ -32,6 +35,7 @@ fun dataRegistro(navController: NavController? = null) {
     var horaRegistro by remember { mutableStateOf("") }
     var guardar by remember { mutableStateOf("Guardar") }
 
+
     Column(
         modifier = Modifier
             .padding(32.dp)
@@ -39,10 +43,14 @@ fun dataRegistro(navController: NavController? = null) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        DatePicker(fechaRegistro)
+        DatePicker(fecha = fechaRegistro) { fecha ->
+            fechaRegistro = fecha
+        }
         Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
-        DateTimePicker(horaRegistro)
+        DateTimePicker(hora = horaRegistro) { horaSeleccionada ->
+            horaRegistro = horaSeleccionada
+        }
         Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
         TextField(
@@ -83,9 +91,10 @@ fun dataRegistro(navController: NavController? = null) {
     }
 }
 fun enviarRegistro(fechaRegistro: String, horaRegistro: String, temperatura: String, humedadRel: String, nota: String) {
+    Log.i("fecha", " " + convertirFechaHora(fechaRegistro, horaRegistro))
     ///Cargar datos
     val item: IoT = IoT.builder()
-        .datetime(Temporal.DateTime("1970-01-01T12:30:23.999Z"))
+        .datetime(Temporal.DateTime(convertirFechaHora(fechaRegistro, horaRegistro)))
         .temperature(temperatura.toDoubleOrNull()?:0.0)
         .humidity(humedadRel.toDoubleOrNull()?:0.0)
         .note(nota)
@@ -95,13 +104,11 @@ fun enviarRegistro(fechaRegistro: String, horaRegistro: String, temperatura: Str
         { success -> Log.i("Amplify", "Saved item: " + success.item().note) },
         { error -> Log.e("Amplify", "Could not save item to DataStore", error) }
     )
-    Log.i("fecha", " " + fechaRegistro)
-    Log.i("fecha", " " + horaRegistro)
 }
 
 @Composable
-fun DatePicker(fecha: String) {
-    var fecha by remember { mutableStateOf("") }
+fun DatePicker(fecha: String, onFechaSeleccionada: (String) -> Unit) {
+    val selectedDate = remember { mutableStateOf("") }
     val year: Int
     val month: Int
     val day: Int
@@ -111,15 +118,16 @@ fun DatePicker(fecha: String) {
     day = cCalendar.get(Calendar.DAY_OF_MONTH)
     val cDatePickerDialog = DatePickerDialog(
         LocalContext.current,
-        { DatePicker, year: Int, month: Int, day: Int ->
-            fecha = "$day/${month + 1}/$year"
+        { datePicker, year: Int, month: Int, day: Int ->
+            selectedDate.value = "$day/${month + 1}/$year"
+            onFechaSeleccionada(selectedDate.value)
         }, year, month, day
     )
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.align(Alignment.Center)) {
             OutlinedTextField(
                 value = fecha,
-                onValueChange = { fecha = it },
+                onValueChange = { },
                 readOnly = true,
                 label = { Text(text = "Fecha del registro") }
             )
@@ -137,8 +145,9 @@ fun DatePicker(fecha: String) {
     }
 }
 
+
 @Composable
-fun DateTimePicker(hora: String) {
+fun DateTimePicker(hora: String, onHoraSeleccionada: (String) -> Unit) {
     var hora by remember { mutableStateOf("") }
     val horas: Int
     val minutos: Int
@@ -146,8 +155,10 @@ fun DateTimePicker(hora: String) {
     horas = c.get(Calendar.HOUR_OF_DAY)
     minutos = c.get(Calendar.MINUTE)
     val timePickerDialog = TimePickerDialog(LocalContext.current,
-        { DateTimePicker, horas, minutos ->
-            hora = "$horas:$minutos"
+        { _, horas, minutos ->
+            val horaSeleccionada = "$horas:$minutos"
+            hora = horaSeleccionada
+            onHoraSeleccionada(horaSeleccionada)
         }, horas, minutos, false
     )
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -170,5 +181,16 @@ fun DateTimePicker(hora: String) {
             )
         }
     }
+}
+
+fun convertirFechaHora(fecha: String, hora: String): String {
+    val formatoEntrada = DateTimeFormatter.ofPattern("d/M/yyyy H:mm")
+    val formatoSalida = DateTimeFormatter.ISO_INSTANT
+
+    val fechaHora = LocalDateTime.parse("$fecha $hora", formatoEntrada)
+    val instant = fechaHora.toInstant(ZoneOffset.UTC)
+    val cadenaFormateada = formatoSalida.format(instant)
+
+    return cadenaFormateada
 }
 
